@@ -272,7 +272,8 @@
       
       <!-- 적용 규칙 요약 칩 -->
       <div class="mt-4 pt-3.5 border-t border-slate-100 flex flex-wrap gap-2 text-xs text-slate-600">
-        <span class="bg-slate-100 px-3 py-1.5 rounded-lg text-slate-800 font-semibold">✓ 매일 무조건 1명 야간(n)</span>
+        <span class="bg-indigo-50 text-indigo-900 border border-indigo-200 px-3 py-1.5 rounded-lg font-bold">✓ 평일(월~금): 주간(s) 2명 · 야간(n) 1명</span>
+        <span class="bg-rose-50 text-rose-900 border border-rose-200 px-3 py-1.5 rounded-lg font-bold">✓ 주말/공휴일: 주간(s) 1명 · 야간(n) 1명</span>
         <span class="bg-slate-100 px-3 py-1.5 rounded-lg text-slate-800 font-semibold">✓ 연속 휴무(/ /) 원천 차단</span>
         <span class="bg-slate-100 px-3 py-1.5 rounded-lg text-slate-800 font-semibold">✓ 2일 일하고 1일 휴무(2-1 주기)</span>
         <span class="bg-slate-100 px-3 py-1.5 rounded-lg text-slate-800 font-semibold">✓ 야간(n) 다음 날 주간(s) 출근 금지</span>
@@ -308,10 +309,10 @@
         <div class="flex items-center gap-2">
           <span class="font-bold text-slate-700">표시 안내:</span>
           <span class="inline-flex items-center gap-1.5 text-slate-600 font-medium">
-            <span class="w-3.5 h-3.5 rounded bg-amber-100 border border-amber-400 inline-block"></span> 주황점 = 본인이 찍은 희망휴무
+            <span class="w-3.5 h-3.5 rounded bg-amber-100 border border-amber-400 inline-block"></span> 주황점 = 희망휴무
           </span>
-          <span class="inline-flex items-center gap-1.5 text-slate-600 font-medium ml-3">
-            <span class="w-3.5 h-3.5 rounded bg-rose-100 border border-rose-400 inline-block"></span> 빨간색 = 야간 1명 누락 경고
+          <span class="inline-flex items-center gap-1.5 text-slate-600 font-medium ml-2">
+            <span class="w-3.5 h-3.5 rounded bg-rose-100 border border-rose-400 inline-block"></span> 빨간색 = 근무인원(s/n) 미달 경고
           </span>
         </div>
         <div class="text-slate-600 font-medium">
@@ -340,40 +341,33 @@
     let activeStamp = null; // null(순환 클릭) or '/', 's', 'n', ''
     let isReadOnly = false; // 보기 전용 모드 여부
     
-    // 4명의 기본 간병사 정보
-    let workers = [
-      { id: 0, role: "간병사", name: "간병사 1" },
-      { id: 1, role: "간병사", name: "간병사 2" },
-      { id: 2, role: "간병사", name: "간병사 3" },
-      { id: 3, role: "간병사", name: "간병사 4" }
-    ];
+    // 한국 주요 법정공휴일 (양력 고정 공휴일 + 주요 명절 및 대체공휴일 2024~2030 매핑)
+    const HOLIDAYS = {
+      // 2024
+      "2024-1-1": "신정", "2024-2-9": "설날", "2024-2-10": "설날", "2024-2-11": "설날", "2024-2-12": "대체공휴일",
+      "2024-3-1": "삼일절", "2024-4-10": "총선", "2024-5-5": "어린이날", "2024-5-6": "대체공휴일", "2024-5-15": "부처님오신날",
+      "2024-6-6": "현충일", "2024-8-15": "광복절", "2024-9-16": "추석", "2024-9-17": "추석", "2024-9-18": "추석",
+      "2024-10-3": "개천절", "2024-10-9": "한글날", "2024-12-25": "성탄절",
+      // 2025
+      "2025-1-1": "신정", "2025-1-28": "설날", "2025-1-29": "설날", "2025-1-30": "설날",
+      "2025-3-1": "삼일절", "2025-3-3": "대체공휴일", "2025-5-5": "어린이날", "2025-5-6": "부처님오신날",
+      "2025-6-6": "현충일", "2025-8-15": "광복절", "2025-10-3": "개천절", "2025-10-5": "추석", "2025-10-6": "추석", "2025-10-7": "추석", "2025-10-8": "대체공휴일", "2025-10-9": "한글날", "2025-12-25": "성탄절",
+      // 2026
+      "2026-1-1": "신정", "2026-2-16": "설날", "2026-2-17": "설날", "2026-2-18": "설날",
+      "2026-3-1": "삼일절", "2026-3-2": "대체공휴일", "2026-5-5": "어린이날", "2026-5-24": "부처님오신날", "2026-5-25": "대체공휴일",
+      "2026-6-6": "현충일", "2026-8-15": "광복절", "2026-8-17": "대체공휴일", "2026-9-24": "추석", "2026-9-25": "추석", "2026-9-26": "추석",
+      "2026-10-3": "개천절", "2026-10-5": "대체공휴일", "2026-10-9": "한글날", "2026-12-25": "성탄절",
+      // 2027
+      "2027-1-1": "신정", "2027-2-6": "설날", "2027-2-7": "설날", "2027-2-8": "설날", "2027-2-9": "대체공휴일",
+      "2027-3-1": "삼일절", "2027-5-5": "어린이날", "2027-5-13": "부처님오신날", "2027-6-6": "현충일", "2027-8-15": "광복절", "2027-8-16": "대체공휴일",
+      "2027-9-14": "추석", "2027-9-15": "추석", "2027-9-16": "추석", "2027-10-3": "개천절", "2027-10-4": "대체공휴일", "2027-10-9": "한글날", "2027-12-25": "성탄절"
+    };
 
-    // schedule[workerId][day] = { shift: 's'|'n'|'/'|'', isRequested: boolean }
-    let schedule = {};
-
-    const yearSelect = document.getElementById("yearSelect");
-    const monthSelect = document.getElementById("monthSelect");
-    const prevMonthBtn = document.getElementById("prevMonthBtn");
-    const nextMonthBtn = document.getElementById("nextMonthBtn");
-    const autoGenerateBtn = document.getElementById("autoGenerateBtn");
-    const clearBtn = document.getElementById("clearBtn");
-    const printBtn = document.getElementById("printBtn");
-    const downloadCsvBtn = document.getElementById("downloadCsvBtn");
-    const shareReadOnlyBtn = document.getElementById("shareReadOnlyBtn");
-    const shareLinkBtn = document.getElementById("shareLinkBtn");
-    const editFloorBtn = document.getElementById("editFloorBtn");
-    const scheduleTable = document.getElementById("scheduleTable");
-    const sheetTitle = document.getElementById("sheetTitle");
-    const subTitle = document.getElementById("subTitle");
-    const statsGrid = document.getElementById("statsGrid");
-    const stampBtns = document.querySelectorAll(".stamp-btn");
-    const guideSection = document.getElementById("guideSection");
-    const readOnlyNotice = document.getElementById("readOnlyNotice");
-    const toast = document.getElementById("toast");
-    const toastMsg = document.getElementById("toastMsg");
-
-    function getDaysInMonth(year, month) {
-      return new Date(year, month, 0).getDate();
+    function isHolidayOrWeekend(year, month, day) {
+      const dow = new Date(year, month - 1, day).getDay();
+      if (dow === 0 || dow === 6) return true; // 토요일, 일요일
+      const key = `${year}-${month}-${day}`;
+      return Boolean(HOLIDAYS[key]);
     }
 
     function getDayOfWeek(year, month, day) {
@@ -474,9 +468,10 @@
       html += `<tr class="bg-slate-50 text-xs sm:text-sm text-slate-600 border-b border-slate-300">`;
       for (let d = 1; d <= daysCount; d++) {
         const dow = getDayOfWeek(currentYear, currentMonth, d);
+        const isHol = isHolidayOrWeekend(currentYear, currentMonth, d);
         let colorClass = "text-slate-600";
-        if (dow === 0) colorClass = "text-rose-600 font-bold";
-        if (dow === 6) colorClass = "text-blue-600 font-bold";
+        if (dow === 0 || (isHol && dow !== 6)) colorClass = "text-rose-600 font-bold bg-rose-50/50";
+        else if (dow === 6) colorClass = "text-blue-600 font-bold bg-blue-50/50";
         html += `<th class="py-1 border border-slate-300 ${colorClass}">${dayNames[dow]}</th>`;
       }
       html += `<th class="col-stat border border-slate-300 bg-sky-50 text-xs sm:text-sm font-bold text-sky-800">s</th>`;
@@ -541,26 +536,32 @@
         html += `</tr>`;
       });
 
-      // 일별 상태 검증 행 (야간 1명 충족 여부 체크)
+      // 일별 상태 검증 행 (평일: S=2 / N=1, 주말·공휴일: S=1 / N=1 충족 여부)
       html += `<tr class="bg-slate-100 font-bold text-xs sm:text-sm no-print">`;
-      html += `<td colspan="2" class="p-2 text-slate-600 border border-slate-300 text-right pr-3 font-bold">야간(N) 검증</td>`;
+      html += `<td colspan="2" class="p-2 text-slate-700 border border-slate-300 text-right pr-2 font-bold text-xs">근무 인원 검증</td>`;
       for (let d = 1; d <= daysCount; d++) {
-        let nightWorkers = 0;
+        const isHol = isHolidayOrWeekend(currentYear, currentMonth, d);
+        const reqS = isHol ? 1 : 2;
+        const reqN = 1;
+
+        let sCount = 0;
+        let nCount = 0;
         workers.forEach(w => {
-          if (schedule[w.id][d].shift === 'n') nightWorkers++;
+          const shift = schedule[w.id][d].shift;
+          if (shift === 's') sCount++;
+          if (shift === 'n') nCount++;
         });
 
-        let statusBg = "bg-emerald-100 text-emerald-800 font-semibold";
-        let text = "OK";
-        if (nightWorkers === 0) {
-          statusBg = "bg-rose-200 text-rose-800 font-extrabold animate-pulse";
-          text = "0";
-        } else if (nightWorkers > 1) {
-          statusBg = "bg-amber-200 text-amber-900 font-extrabold";
-          text = nightWorkers;
+        const isExact = (sCount === reqS && nCount === reqN);
+        let statusBg = "bg-emerald-100 text-emerald-800 font-bold";
+        let label = `s${sCount}n${nCount}`;
+
+        if (!isExact) {
+          statusBg = "bg-rose-100 text-rose-700 font-extrabold";
         }
 
-        html += `<td class="p-1 border border-slate-300 ${statusBg}" title="${d}일 야간근무자: ${nightWorkers}명">${text}</td>`;
+        const tooltip = `${d}일 (${isHol ? '주말/공휴일 목표 s:1, n:1' : '평일 목표 s:2, n:1'}) - 현재 s:${sCount}명, n:${nCount}명`;
+        html += `<td class="p-0.5 border border-slate-300 ${statusBg} text-[10px] sm:text-xs" title="${tooltip}">${label}</td>`;
       }
       html += `<td colspan="3" class="border border-slate-300 bg-slate-100"></td>`;
       html += `</tr>`;
@@ -840,11 +841,10 @@
 
     function autoGenerateSchedule() {
       const daysCount = getDaysInMonth(currentYear, currentMonth);
-      const targetOffPerPerson = Math.floor(daysCount / 3);
 
       let bestSolution = null;
       let minPenalty = Infinity;
-      const MAX_ATTEMPTS = 140;
+      const MAX_ATTEMPTS = 350; // 높은 정밀도 탐색
 
       for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
         let tempSchedule = {};
@@ -859,9 +859,8 @@
         });
 
         let nightCounts = [0, 0, 0, 0];
-        let totalWorkCounts = [0, 0, 0, 0];
+        let dayCounts = [0, 0, 0, 0];
         let offCounts = [0, 0, 0, 0];
-        let penalty = 0;
         let feasible = true;
 
         // 1단계: 매일 1명 야간(n) 선정
@@ -875,6 +874,7 @@
           let candidates = workers.filter(w => {
             const cur = tempSchedule[w.id][d];
             if (cur.shift === '/' || cur.shift === 's') return false;
+            // 연속 2일 초과 야간 방지
             if (d > 1 && tempSchedule[w.id][d - 1].shift === 'n' && d > 2 && tempSchedule[w.id][d - 2].shift === 'n') return false;
             return true;
           });
@@ -901,58 +901,96 @@
 
         if (!feasible) continue;
 
-        // 2단계: 주간(s) 및 휴무(/) 배정
+        // 2단계: 평일 s=2명, 주말/공휴일 s=1명 배정
         for (let d = 1; d <= daysCount; d++) {
+          const isHol = isHolidayOrWeekend(currentYear, currentMonth, d);
+          const requiredS = isHol ? 1 : 2;
+
+          let sAssigned = [];
           for (let w = 0; w < 4; w++) {
-            if (tempSchedule[w][d].shift !== "") {
-              if (tempSchedule[w][d].shift === '/') offCounts[w]++;
-              else totalWorkCounts[w]++;
-              continue;
+            if (tempSchedule[w][d].shift === 's') {
+              sAssigned.push(w);
+              dayCounts[w]++;
+            }
+          }
+
+          let needed = requiredS - sAssigned.length;
+          if (needed > 0) {
+            // 주간 근무 가능한 후보군 선별
+            let sCandidates = [];
+            for (let w = 0; w < 4; w++) {
+              if (tempSchedule[w][d].shift !== "") continue; // 이미 n이나 / 지정된 사람 제외
+              const prevShift = (d > 1) ? tempSchedule[w][d - 1].shift : "";
+              if (prevShift === 'n') continue; // 야간 후 바로 주간 출근 금지
+              sCandidates.push(w);
             }
 
-            const prevShift = (d > 1) ? tempSchedule[w][d - 1].shift : "";
-            const prev2Shift = (d > 2) ? tempSchedule[w][d - 2].shift : "";
+            // 후보 정렬: 누적 주간 근무 적은 사람 + 전날 일했던 사람(2일 연속 근무 장려) 우선
+            sCandidates.sort((a, b) => {
+              const totalA = dayCounts[a] + nightCounts[a];
+              const totalB = dayCounts[b] + nightCounts[b];
+              if (totalA !== totalB) return totalA - totalB;
+              
+              const prevA = (d > 1) ? tempSchedule[a][d - 1].shift : "";
+              const prevB = (d > 1) ? tempSchedule[b][d - 1].shift : "";
+              // 전날 쉬었으면 오늘 일하는 우선순위
+              if (prevA === '/' && prevB !== '/') return -1;
+              if (prevB === '/' && prevA !== '/') return 1;
 
-            if (prevShift === 'n') {
+              return Math.random() - 0.5;
+            });
+
+            for (let i = 0; i < needed && i < sCandidates.length; i++) {
+              const chosenWorker = sCandidates[i];
+              tempSchedule[chosenWorker][d].shift = 's';
+              dayCounts[chosenWorker]++;
+            }
+          }
+
+          // 3단계: n도 s도 아닌 남은 사람은 휴무(/) 처리
+          for (let w = 0; w < 4; w++) {
+            if (tempSchedule[w][d].shift === "") {
               tempSchedule[w][d].shift = '/';
               offCounts[w]++;
-              continue;
+            } else if (tempSchedule[w][d].shift === '/') {
+              offCounts[w]++;
             }
-
-            if (prevShift === '/') {
-              tempSchedule[w][d].shift = 's';
-              totalWorkCounts[w]++;
-              continue;
-            }
-
-            if (prevShift === 's' && prev2Shift === 's') {
-              if (offCounts[w] < targetOffPerPerson + 1) {
-                tempSchedule[w][d].shift = '/';
-                offCounts[w]++;
-                continue;
-              }
-            }
-
-            tempSchedule[w][d].shift = 's';
-            totalWorkCounts[w]++;
           }
         }
 
-        // 3단계: 페널티 평가
+        // 4단계: 엄격한 규칙 페널티 평가
+        let penalty = 0;
+
+        for (let d = 1; d <= daysCount; d++) {
+          const isHol = isHolidayOrWeekend(currentYear, currentMonth, d);
+          const reqS = isHol ? 1 : 2;
+          let sCount = 0;
+          let nCount = 0;
+          for (let w = 0; w < 4; w++) {
+            if (tempSchedule[w][d].shift === 's') sCount++;
+            if (tempSchedule[w][d].shift === 'n') nCount++;
+          }
+          if (sCount !== reqS) penalty += Math.abs(sCount - reqS) * 400; // 평일 s 2명, 휴일 s 1명 위반 엄벌
+          if (nCount !== 1) penalty += 500;
+        }
+
         for (let w = 0; w < 4; w++) {
-          const totalWork = daysCount - offCounts[w];
-          if (totalWork < 20) penalty += (20 - totalWork) * 15;
-          if (totalWork > 21) penalty += (totalWork - 21) * 15;
+          const totalWork = dayCounts[w] + nightCounts[w];
+          // 20~21일 근무 균등
+          if (totalWork < 20) penalty += (20 - totalWork) * 35;
+          if (totalWork > 21) penalty += (totalWork - 21) * 35;
 
+          // 야간 균등 분배
           const idealNights = daysCount / 4;
-          penalty += Math.abs(nightCounts[w] - idealNights) * 6;
+          penalty += Math.abs(nightCounts[w] - idealNights) * 10;
 
+          // 연속 휴무 방지 & 야간 후 주간 방지
           for (let d = 2; d <= daysCount; d++) {
             if (tempSchedule[w][d - 1].shift === '/' && tempSchedule[w][d].shift === '/') {
-              penalty += 200;
+              penalty += 250; // 연속 휴무 감점
             }
             if (tempSchedule[w][d - 1].shift === 'n' && tempSchedule[w][d].shift === 's') {
-              penalty += 300;
+              penalty += 600; // 야간 후 주간 금지
             }
           }
         }
@@ -968,9 +1006,9 @@
         schedule = bestSolution;
         saveToLocalStorage();
         renderTable();
-        showToast("규칙에 맞춰 최적의 근무표가 자동 편성되었습니다!");
+        showToast("✓ 평일 s 2명 / 공휴일 s 1명 / 매일 n 1명 배정 완료!");
       } else {
-        showToast("설정된 희망 휴무가 너무 많아 편성이 어렵습니다.", true);
+        showToast("설정된 희망 휴무가 너무 많아 인원 조건을 맞추기 어렵습니다.", true);
       }
     }
 
