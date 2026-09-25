@@ -417,7 +417,7 @@
       const daysCount = getDaysInMonth(currentYear, currentMonth);
       const dayNames = ['일', '월', '화', '수', '목', '금', '토'];
 
-      sheetTitle.innerText = `월 근무표 - ${departmentName}`;
+      sheetTitle.innerText = `${currentMonth}월 근무표 - ${departmentName}`;
       subTitle.innerText = `${currentYear}년 ${currentMonth}월 (총 ${daysCount}일)`;
 
       let html = `<thead>`;
@@ -972,7 +972,7 @@
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.setAttribute("href", url);
-      link.setAttribute("download", `월근무표_${departmentName}_${currentYear}년${currentMonth}월.csv`);
+      link.setAttribute("download", `${currentMonth}월_근무표_${departmentName}_${currentYear}년.csv`);
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
