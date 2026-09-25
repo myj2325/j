@@ -102,33 +102,47 @@
         border: 1.5px solid #000 !important;
         text-align: center !important;
         vertical-align: middle !important;
-        font-size: 9.5pt !important;
-        padding: 4px 1px !important;
+        font-size: 9pt !important;
+        padding: 3px 0.5px !important;
         line-height: 1.15 !important;
         color: #000 !important;
+        box-sizing: border-box !important;
       }
-      /* 간병사 성명 줄바꿈 방지 */
-      .worker-name-col {
-        white-space: nowrap !important;
-        font-size: 10pt !important;
+      /* 직책 & 성명 열 너비 및 넘침 방지 */
+      .col-role {
+        font-size: 8.5pt !important;
+        font-weight: 600 !important;
+        padding: 2px 1px !important;
+        word-break: keep-all !important;
+        overflow: hidden !important;
+      }
+      .col-name {
+        font-size: 9pt !important;
         font-weight: 700 !important;
-        padding: 0 3px !important;
+        padding: 2px 1px !important;
+        word-break: keep-all !important;
+        overflow: hidden !important;
+      }
+      .worker-name-col {
+        font-size: 9pt !important;
+        font-weight: 700 !important;
+        padding: 0 1px !important;
+        overflow: hidden !important;
       }
       .worker-name-input {
         border: none !important;
         background: transparent !important;
         text-align: center !important;
-        font-size: 10pt !important;
+        font-size: 9pt !important;
         font-weight: 700 !important;
         padding: 0 !important;
         margin: 0 !important;
         width: 100% !important;
-        white-space: nowrap !important;
         color: #000 !important;
       }
       .cell-shift {
         height: 28px !important;
-        font-size: 12pt !important;
+        font-size: 11pt !important;
         font-weight: 800 !important;
       }
     }
@@ -420,25 +434,40 @@
       sheetTitle.innerText = `${currentMonth}월 근무표 - ${departmentName}`;
       subTitle.innerText = `${currentYear}년 ${currentMonth}월 (총 ${daysCount}일)`;
 
-      let html = `<thead>`;
+      // A4 가로 기준 열 너비 완벽 비율 분할:
+      // 직책 5.5% + 성명 9.5% + 통계 3열(각 4% = 12%) = 27%
+      // 남은 73%를 해당 월 일수(28~31일)로 균등 배분 (일당 약 2.35%~2.6%)
+      const dayColWidth = (73 / daysCount).toFixed(2);
+
+      let html = `<colgroup>`;
+      html += `<col class="col-role" style="width: 5.5%;" />`;
+      html += `<col class="col-name" style="width: 9.5%;" />`;
+      for (let d = 1; d <= daysCount; d++) {
+        html += `<col class="col-day" style="width: ${dayColWidth}%;" />`;
+      }
+      html += `<col class="col-stat" style="width: 4%;" />`;
+      html += `<col class="col-stat" style="width: 4%;" />`;
+      html += `<col class="col-stat" style="width: 4%;" />`;
+      html += `</colgroup>`;
+
+      html += `<thead>`;
       
       // 행 1: 직책 / 성명 / 1..daysCount / 주간 / 야간 / 휴일
-      // table-layout: fixed 환경에 맞춰 성명은 줄바꿈 없이(whitespace-nowrap) 여유 있게 배정
       html += `<tr class="bg-slate-100 text-slate-800 font-extrabold border-b border-slate-300 text-sm sm:text-base">`;
-      html += `<th rowspan="2" class="p-2 border border-slate-300 w-14 sm:w-16 bg-slate-200 whitespace-nowrap">직책</th>`;
-      html += `<th rowspan="2" class="worker-name-col p-2 border border-slate-300 w-24 sm:w-32 bg-slate-200 whitespace-nowrap">성명</th>`;
+      html += `<th rowspan="2" class="col-role p-1 sm:p-2 border border-slate-300 bg-slate-200">직책</th>`;
+      html += `<th rowspan="2" class="col-name worker-name-col p-1 sm:p-2 border border-slate-300 bg-slate-200">성명</th>`;
       
       for (let d = 1; d <= daysCount; d++) {
         const dow = getDayOfWeek(currentYear, currentMonth, d);
         let colorClass = "text-slate-800";
         if (dow === 0) colorClass = "text-rose-600 bg-rose-50/70";
         if (dow === 6) colorClass = "text-blue-600 bg-blue-50/70";
-        html += `<th class="p-1 sm:p-1.5 border border-slate-300 font-bold ${colorClass}">${d}</th>`;
+        html += `<th class="p-0.5 sm:p-1 border border-slate-300 font-bold ${colorClass}">${d}</th>`;
       }
       
-      html += `<th class="p-1 sm:p-1.5 border border-slate-300 w-10 sm:w-12 bg-sky-100 text-sky-900 font-extrabold whitespace-nowrap">주<br class="hidden sm:inline">간</th>`;
-      html += `<th class="p-1 sm:p-1.5 border border-slate-300 w-10 sm:w-12 bg-indigo-100 text-indigo-900 font-extrabold whitespace-nowrap">야<br class="hidden sm:inline">간</th>`;
-      html += `<th class="p-1 sm:p-1.5 border border-slate-300 w-10 sm:w-12 bg-rose-100 text-rose-900 font-extrabold whitespace-nowrap">휴<br class="hidden sm:inline">일</th>`;
+      html += `<th class="col-stat p-0.5 sm:p-1 border border-slate-300 bg-sky-100 text-sky-900 font-extrabold">주<br class="hidden sm:inline">간</th>`;
+      html += `<th class="col-stat p-0.5 sm:p-1 border border-slate-300 bg-indigo-100 text-indigo-900 font-extrabold">야<br class="hidden sm:inline">간</th>`;
+      html += `<th class="col-stat p-0.5 sm:p-1 border border-slate-300 bg-rose-100 text-rose-900 font-extrabold">휴<br class="hidden sm:inline">일</th>`;
       html += `</tr>`;
 
       // 행 2: 요일 표시 행
@@ -450,23 +479,23 @@
         if (dow === 6) colorClass = "text-blue-600 font-bold";
         html += `<th class="py-1 border border-slate-300 ${colorClass}">${dayNames[dow]}</th>`;
       }
-      html += `<th class="border border-slate-300 bg-sky-50 text-xs sm:text-sm font-bold text-sky-800">s</th>`;
-      html += `<th class="border border-slate-300 bg-indigo-50 text-xs sm:text-sm font-bold text-indigo-800">n</th>`;
-      html += `<th class="border border-slate-300 bg-rose-50 text-xs sm:text-sm font-bold text-rose-800">/</th>`;
+      html += `<th class="col-stat border border-slate-300 bg-sky-50 text-xs sm:text-sm font-bold text-sky-800">s</th>`;
+      html += `<th class="col-stat border border-slate-300 bg-indigo-50 text-xs sm:text-sm font-bold text-indigo-800">n</th>`;
+      html += `<th class="col-stat border border-slate-300 bg-rose-50 text-xs sm:text-sm font-bold text-rose-800">/</th>`;
       html += `</tr>`;
       html += `</thead><tbody>`;
 
       // 4명의 간병사 행 렌더링
       workers.forEach((worker) => {
         html += `<tr class="hover:bg-slate-50/80 transition-colors">`;
-        html += `<td class="p-2 sm:p-3 border border-slate-300 font-semibold text-slate-700 bg-slate-50 text-sm sm:text-base whitespace-nowrap">${worker.role}</td>`;
+        html += `<td class="col-role p-1 sm:p-2 border border-slate-300 font-semibold text-slate-700 bg-slate-50 text-xs sm:text-sm">${worker.role}</td>`;
         
-        // 보기 전용일 경우 이름 인풋 비활성화 (whitespace-nowrap 적용으로 줄바꿈 방지)
+        // 성명 칸: 충분한 너비와 오버플로우 방지
         if (isReadOnly) {
-          html += `<td class="worker-name-col p-2 sm:p-3 border border-slate-300 font-bold text-slate-900 bg-slate-50 text-center select-none text-sm sm:text-base whitespace-nowrap">${worker.name}</td>`;
+          html += `<td class="col-name worker-name-col p-1 sm:p-2 border border-slate-300 font-bold text-slate-900 bg-slate-50 text-center select-none text-xs sm:text-sm">${worker.name}</td>`;
         } else {
-          html += `<td class="worker-name-col p-1 border border-slate-300 font-bold text-slate-900 bg-slate-50 text-sm sm:text-base whitespace-nowrap">
-            <input type="text" value="${worker.name}" data-worker-id="${worker.id}" class="worker-name-input w-full text-center bg-transparent border-none focus:outline-none focus:ring-2 focus:ring-indigo-400 rounded py-1 font-bold text-slate-900 whitespace-nowrap" />
+          html += `<td class="col-name worker-name-col p-0.5 border border-slate-300 font-bold text-slate-900 bg-slate-50 text-xs sm:text-sm">
+            <input type="text" value="${worker.name}" data-worker-id="${worker.id}" class="worker-name-input w-full text-center bg-transparent border-none focus:outline-none focus:ring-1 focus:ring-indigo-400 rounded py-0.5 font-bold text-slate-900" />
           </td>`;
         }
 
@@ -485,12 +514,12 @@
           let badgeClass = "text-slate-300";
           let bgClass = "";
           if (shift === '/') {
-            badgeClass = "text-rose-600 font-extrabold text-lg sm:text-xl";
+            badgeClass = "text-rose-600 font-extrabold text-base sm:text-lg";
             bgClass = cell.isRequested ? "bg-amber-100/70" : "bg-rose-50/30";
           } else if (shift === 's') {
-            badgeClass = "text-sky-700 font-extrabold text-base sm:text-lg";
+            badgeClass = "text-sky-700 font-extrabold text-sm sm:text-base";
           } else if (shift === 'n') {
-            badgeClass = "text-indigo-800 font-black text-base sm:text-lg";
+            badgeClass = "text-indigo-800 font-black text-sm sm:text-base";
           }
 
           const requestDot = cell.isRequested ? `<span class="absolute top-1 right-1 w-2 h-2 bg-amber-500 rounded-full no-print shadow-sm" title="희망 휴무 지정"></span>` : "";
@@ -498,17 +527,17 @@
 
           html += `<td class="p-0 border border-slate-300 relative select-none transition-colors ${cursorClass} ${bgClass}" 
                       data-worker="${worker.id}" data-day="${d}">
-            <div class="cell-shift h-10 sm:h-12 flex items-center justify-center ${badgeClass}">
-              ${shift || '<span class="text-slate-200 text-sm no-print">-</span>'}
+            <div class="cell-shift h-9 sm:h-11 flex items-center justify-center ${badgeClass}">
+              ${shift || '<span class="text-slate-200 text-xs no-print">-</span>'}
             </div>
             ${requestDot}
           </td>`;
         }
 
         // 통계 컬럼 (주간 / 야간 / 휴일)
-        html += `<td class="p-1 sm:p-2 border border-slate-300 font-extrabold text-sky-800 bg-sky-50 text-sm sm:text-base whitespace-nowrap">${sCount}</td>`;
-        html += `<td class="p-1 sm:p-2 border border-slate-300 font-extrabold text-indigo-800 bg-indigo-50 text-sm sm:text-base whitespace-nowrap">${nCount}</td>`;
-        html += `<td class="p-1 sm:p-2 border border-slate-300 font-extrabold text-rose-800 bg-rose-50 text-sm sm:text-base whitespace-nowrap">${offCount}</td>`;
+        html += `<td class="col-stat p-0.5 sm:p-1 border border-slate-300 font-extrabold text-sky-800 bg-sky-50 text-xs sm:text-sm">${sCount}</td>`;
+        html += `<td class="col-stat p-0.5 sm:p-1 border border-slate-300 font-extrabold text-indigo-800 bg-indigo-50 text-xs sm:text-sm">${nCount}</td>`;
+        html += `<td class="col-stat p-0.5 sm:p-1 border border-slate-300 font-extrabold text-rose-800 bg-rose-50 text-xs sm:text-sm">${offCount}</td>`;
         html += `</tr>`;
       });
 
@@ -1059,8 +1088,12 @@
         const span = document.createElement("span");
         span.textContent = inp.value;
         span.style.fontWeight = "bold";
-        span.style.fontSize = "10pt";
-        span.style.whiteSpace = "nowrap";
+        span.style.fontSize = "9pt";
+        span.style.display = "block";
+        span.style.width = "100%";
+        span.style.textAlign = "center";
+        span.style.overflow = "hidden";
+        span.style.wordBreak = "keep-all";
         inp.parentNode.replaceChild(span, inp);
       });
 
@@ -1089,7 +1122,7 @@
           <style>
             @page {
               size: A4 landscape;
-              margin: 6mm 5mm;
+              margin: 5mm 4mm;
             }
             body {
               font-family: -apple-system, BlinkMacSystemFont, "Malgun Gothic", "맑은 고딕", sans-serif;
@@ -1102,18 +1135,18 @@
             }
             .print-title-area {
               text-align: center;
-              margin-bottom: 3mm;
+              margin-bottom: 2mm;
             }
             .print-title {
-              font-size: 26pt;
+              font-size: 24pt;
               font-weight: 900;
               letter-spacing: 5px;
-              margin: 0 0 1.5mm 0;
+              margin: 0 0 1mm 0;
             }
             #subTitle {
-              font-size: 11pt;
+              font-size: 10.5pt;
               font-weight: bold;
-              margin: 0 0 3mm 0;
+              margin: 0 0 2mm 0;
               color: #222;
             }
             table {
@@ -1122,26 +1155,40 @@
               table-layout: fixed;
             }
             th, td {
-              border: 1.5px solid #000;
+              border: 1.2px solid #000;
               text-align: center;
               vertical-align: middle;
-              font-size: 9.5pt;
-              padding: 4px 1px;
+              font-size: 8.5pt;
+              padding: 3px 0.5px;
               line-height: 1.15;
+              box-sizing: border-box;
             }
             th {
               background-color: #f1f5f9 !important;
             }
-            .worker-name-col {
-              white-space: nowrap !important;
+            .col-role {
+              font-size: 8pt !important;
+              font-weight: normal;
+              word-break: keep-all;
+              overflow: hidden;
+            }
+            .col-name, .worker-name-col {
+              font-size: 9pt !important;
+              font-weight: bold;
+              word-break: keep-all;
+              overflow: hidden;
+              padding: 2px 1px !important;
+            }
+            .col-stat {
+              font-size: 8.5pt !important;
               font-weight: bold;
             }
             .cell-shift {
-              height: 28px;
+              height: 26px;
               display: flex;
               align-items: center;
               justify-content: center;
-              font-size: 12pt;
+              font-size: 11pt;
               font-weight: bold;
             }
           </style>
