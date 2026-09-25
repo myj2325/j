@@ -15,22 +15,32 @@
       font-family: 'Pretendard', sans-serif;
       font-size: 15px; /* 전체 기본 글자 크기 확대 */
     }
-    /* 인쇄 전용 스타일: A4 가로 1페이지 완벽 맞춤 및 줄바꿈 방지 */
+    /* 인쇄 전용 스타일: 오직 월 근무표 본문만 A4 가로 1페이지 완벽 맞춤 */
     @media print {
       @page {
         size: A4 landscape;
-        margin: 5mm 4mm; /* 여백을 최소화하여 31일 전체가 1페이지에 완벽하게 쏙 들어가도록 설정 */
+        margin: 6mm 5mm; /* 여백을 최소화하여 31일 전체가 1페이지에 쏙 들어가도록 설정 */
       }
       *, *::before, *::after {
         box-shadow: none !important;
         text-shadow: none !important;
       }
-      .no-print {
+      /* 헤더, 버튼바, 가이드, 안내 배너 등 모든 부가 UI 강제 숨김 */
+      header, 
+      #guideSection, 
+      #readOnlyNotice, 
+      #statsGrid, 
+      #toast, 
+      .no-print,
+      nav,
+      aside {
         display: none !important;
+        visibility: hidden !important;
+        height: 0 !important;
+        margin: 0 !important;
+        padding: 0 !important;
       }
-      .print-only {
-        display: block !important;
-      }
+
       html, body {
         background: white !important;
         color: black !important;
@@ -41,31 +51,46 @@
         -webkit-print-color-adjust: exact !important;
         print-color-adjust: exact !important;
       }
-      /* 부모 컨테이너의 스크롤 및 잘림 방지 (전체 너비 출력) */
-      main, .bg-white, .overflow-x-auto {
+
+      /* 메인 컨테이너 및 인쇄 영역 전용 스타일 */
+      main {
+        padding: 0 !important;
+        margin: 0 !important;
+        max-width: 100% !important;
+        width: 100% !important;
+      }
+
+      #printArea {
+        border: none !important;
+        box-shadow: none !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        width: 100% !important;
+      }
+
+      .overflow-x-auto {
         overflow: visible !important;
         display: block !important;
         width: 100% !important;
-        max-width: 100% !important;
-        margin: 0 !important;
-        padding: 0 !important;
-        border: none !important;
       }
+
       .print-title-area {
+        margin-top: 2mm !important;
         margin-bottom: 3mm !important;
         text-align: center !important;
       }
       .print-title {
-        font-size: 24pt !important;
-        font-weight: 800 !important;
-        letter-spacing: 5px !important;
-        margin-bottom: 1mm !important;
+        font-size: 26pt !important;
+        font-weight: 900 !important;
+        letter-spacing: 6px !important;
+        margin-bottom: 1.5mm !important;
+        color: #000 !important;
       }
       #subTitle {
         font-size: 11pt !important;
         font-weight: 700 !important;
-        color: #333 !important;
-        margin-bottom: 2mm !important;
+        color: #222 !important;
+        margin-bottom: 3mm !important;
       }
       .print-table {
         width: 100% !important;
@@ -74,35 +99,36 @@
         page-break-inside: avoid !important;
       }
       .print-table th, .print-table td {
-        border: 1.5px solid #111 !important;
+        border: 1.5px solid #000 !important;
         text-align: center !important;
         vertical-align: middle !important;
-        font-size: 9.5pt !important; /* 1~31일이 삐져나가지 않는 최적 폰트 크기 */
-        padding: 3px 0.5px !important;
+        font-size: 9.5pt !important;
+        padding: 4px 1px !important;
         line-height: 1.15 !important;
         color: #000 !important;
       }
       /* 간병사 성명 줄바꿈 방지 */
       .worker-name-col {
         white-space: nowrap !important;
-        font-size: 9.5pt !important;
+        font-size: 10pt !important;
         font-weight: 700 !important;
-        padding: 0 2px !important;
+        padding: 0 3px !important;
       }
       .worker-name-input {
         border: none !important;
         background: transparent !important;
         text-align: center !important;
-        font-size: 9.5pt !important;
+        font-size: 10pt !important;
         font-weight: 700 !important;
         padding: 0 !important;
         margin: 0 !important;
         width: 100% !important;
         white-space: nowrap !important;
+        color: #000 !important;
       }
       .cell-shift {
-        height: 24px !important;
-        font-size: 11.5pt !important;
+        height: 28px !important;
+        font-size: 12pt !important;
         font-weight: 800 !important;
       }
     }
@@ -240,9 +266,10 @@
       </div>
     </section>
 
-    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden p-4 sm:p-6">
+    <!-- 인쇄 대상 메인 영역 (#printArea) -->
+    <div id="printArea" class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden p-4 sm:p-6">
       
-      <!-- 헤더 (인쇄 시에도 보이는 제목) -->
+      <!-- 헤더 (인쇄 시 제목) -->
       <div class="print-title-area text-center mb-6">
         <div class="flex justify-center items-center gap-3">
           <h2 id="sheetTitle" class="print-title text-2xl sm:text-4xl font-extrabold tracking-wider text-slate-900">
@@ -255,7 +282,7 @@
         <p id="subTitle" class="text-base sm:text-lg text-slate-500 font-bold mt-1.5">2026년 9월 (총 30일)</p>
       </div>
 
-      <!-- 근무표 테이블 래퍼 (인쇄 시 overflow 해제됨) -->
+      <!-- 근무표 테이블 래퍼 -->
       <div class="overflow-x-auto pb-2">
         <table id="scheduleTable" class="print-table w-full text-center border-collapse text-sm">
           <!-- Thead & Tbody dynamically rendered -->
@@ -1009,8 +1036,131 @@
       showToast("자동 배정된 근무가 초기화되었습니다. (희망 휴무 유지)");
     });
 
+    /**
+     * 오직 '월 근무표' 양식만 깨끗하게 인쇄하는 전용 함수
+     * 불필요한 상단 메뉴, 헤더, 안내문 등을 완벽히 배제하고 깨끗한 새 인쇄 창을 띄웁니다.
+     */
+    function printScheduleOnly() {
+      const daysCount = getDaysInMonth(currentYear, currentMonth);
+      const printContents = document.getElementById("printArea");
+      if (!printContents) {
+        window.print();
+        return;
+      }
+
+      // 화면에 입력된 간병사 이름 값 유지 복제
+      const cloned = printContents.cloneNode(true);
+      // no-print 요소들 제거
+      cloned.querySelectorAll(".no-print").forEach(el => el.remove());
+      
+      // input 요소들을 텍스트로 치환하여 인쇄 시 완벽 정렬
+      const inputs = cloned.querySelectorAll("input.worker-name-input");
+      inputs.forEach(inp => {
+        const span = document.createElement("span");
+        span.textContent = inp.value;
+        span.style.fontWeight = "bold";
+        span.style.fontSize = "10pt";
+        span.style.whiteSpace = "nowrap";
+        inp.parentNode.replaceChild(span, inp);
+      });
+
+      // 전용 인쇄용 iframe 생성
+      let printFrame = document.getElementById("cleanPrintFrame");
+      if (!printFrame) {
+        printFrame = document.createElement("iframe");
+        printFrame.id = "cleanPrintFrame";
+        printFrame.style.position = "fixed";
+        printFrame.style.right = "0";
+        printFrame.style.bottom = "0";
+        printFrame.style.width = "0";
+        printFrame.style.height = "0";
+        printFrame.style.border = "0";
+        document.body.appendChild(printFrame);
+      }
+
+      const doc = printFrame.contentWindow.document;
+      doc.open();
+      doc.write(`
+        <!DOCTYPE html>
+        <html lang="ko">
+        <head>
+          <meta charset="UTF-8">
+          <title>${sheetTitle.innerText} (${currentYear}년 ${currentMonth}월)</title>
+          <style>
+            @page {
+              size: A4 landscape;
+              margin: 6mm 5mm;
+            }
+            body {
+              font-family: -apple-system, BlinkMacSystemFont, "Malgun Gothic", "맑은 고딕", sans-serif;
+              margin: 0;
+              padding: 0;
+              color: #000;
+              background: #fff;
+              -webkit-print-color-adjust: exact;
+              print-color-adjust: exact;
+            }
+            .print-title-area {
+              text-align: center;
+              margin-bottom: 3mm;
+            }
+            .print-title {
+              font-size: 26pt;
+              font-weight: 900;
+              letter-spacing: 5px;
+              margin: 0 0 1.5mm 0;
+            }
+            #subTitle {
+              font-size: 11pt;
+              font-weight: bold;
+              margin: 0 0 3mm 0;
+              color: #222;
+            }
+            table {
+              width: 100%;
+              border-collapse: collapse;
+              table-layout: fixed;
+            }
+            th, td {
+              border: 1.5px solid #000;
+              text-align: center;
+              vertical-align: middle;
+              font-size: 9.5pt;
+              padding: 4px 1px;
+              line-height: 1.15;
+            }
+            th {
+              background-color: #f1f5f9 !important;
+            }
+            .worker-name-col {
+              white-space: nowrap !important;
+              font-weight: bold;
+            }
+            .cell-shift {
+              height: 28px;
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              font-size: 12pt;
+              font-weight: bold;
+            }
+          </style>
+        </head>
+        <body>
+          ${cloned.innerHTML}
+        </body>
+        </html>
+      `);
+      doc.close();
+
+      setTimeout(() => {
+        printFrame.contentWindow.focus();
+        printFrame.contentWindow.print();
+      }, 250);
+    }
+
     printBtn.addEventListener("click", () => {
-      window.print();
+      printScheduleOnly();
     });
 
     downloadCsvBtn.addEventListener("click", () => {
