@@ -15,11 +15,15 @@
       font-family: 'Pretendard', sans-serif;
       font-size: 15px; /* 전체 기본 글자 크기 확대 */
     }
-    /* 인쇄 전용 스타일: 제공해주신 실제 용지 양식('월 근무표 - 9층')을 완벽 재현 */
+    /* 인쇄 전용 스타일: A4 가로 1페이지 완벽 맞춤 및 줄바꿈 방지 */
     @media print {
       @page {
         size: A4 landscape;
-        margin: 8mm 6mm;
+        margin: 5mm 4mm; /* 여백을 최소화하여 31일 전체가 1페이지에 완벽하게 쏙 들어가도록 설정 */
+      }
+      *, *::before, *::after {
+        box-shadow: none !important;
+        text-shadow: none !important;
       }
       .no-print {
         display: none !important;
@@ -27,28 +31,79 @@
       .print-only {
         display: block !important;
       }
-      body {
+      html, body {
         background: white !important;
         color: black !important;
         padding: 0 !important;
         margin: 0 !important;
+        width: 100% !important;
+        height: auto !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+      }
+      /* 부모 컨테이너의 스크롤 및 잘림 방지 (전체 너비 출력) */
+      main, .bg-white, .overflow-x-auto {
+        overflow: visible !important;
+        display: block !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        border: none !important;
+      }
+      .print-title-area {
+        margin-bottom: 3mm !important;
+        text-align: center !important;
+      }
+      .print-title {
+        font-size: 24pt !important;
+        font-weight: 800 !important;
+        letter-spacing: 5px !important;
+        margin-bottom: 1mm !important;
+      }
+      #subTitle {
+        font-size: 11pt !important;
+        font-weight: 700 !important;
+        color: #333 !important;
+        margin-bottom: 2mm !important;
       }
       .print-table {
         width: 100% !important;
+        table-layout: fixed !important; /* 31일 전체가 가로 한 장에 균등 배분 */
         border-collapse: collapse !important;
+        page-break-inside: avoid !important;
       }
       .print-table th, .print-table td {
-        border: 1.5px solid #222 !important;
+        border: 1.5px solid #111 !important;
         text-align: center !important;
-        font-size: 13px !important; /* 인쇄 글자 확대 */
-        padding: 5px 1px !important;
+        vertical-align: middle !important;
+        font-size: 9.5pt !important; /* 1~31일이 삐져나가지 않는 최적 폰트 크기 */
+        padding: 3px 0.5px !important;
+        line-height: 1.15 !important;
         color: #000 !important;
       }
-      .print-title {
-        font-size: 30px !important;
+      /* 간병사 성명 줄바꿈 방지 */
+      .worker-name-col {
+        white-space: nowrap !important;
+        font-size: 9.5pt !important;
+        font-weight: 700 !important;
+        padding: 0 2px !important;
+      }
+      .worker-name-input {
+        border: none !important;
+        background: transparent !important;
+        text-align: center !important;
+        font-size: 9.5pt !important;
+        font-weight: 700 !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        width: 100% !important;
+        white-space: nowrap !important;
+      }
+      .cell-shift {
+        height: 24px !important;
+        font-size: 11.5pt !important;
         font-weight: 800 !important;
-        letter-spacing: 4px !important;
-        margin-bottom: 12px !important;
       }
     }
   </style>
@@ -188,7 +243,7 @@
     <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden p-4 sm:p-6">
       
       <!-- 헤더 (인쇄 시에도 보이는 제목) -->
-      <div class="text-center mb-6">
+      <div class="print-title-area text-center mb-6">
         <div class="flex justify-center items-center gap-3">
           <h2 id="sheetTitle" class="print-title text-2xl sm:text-4xl font-extrabold tracking-wider text-slate-900">
             월 근무표 - 9층
@@ -200,7 +255,7 @@
         <p id="subTitle" class="text-base sm:text-lg text-slate-500 font-bold mt-1.5">2026년 9월 (총 30일)</p>
       </div>
 
-      <!-- 근무표 테이블 래퍼 -->
+      <!-- 근무표 테이블 래퍼 (인쇄 시 overflow 해제됨) -->
       <div class="overflow-x-auto pb-2">
         <table id="scheduleTable" class="print-table w-full text-center border-collapse text-sm">
           <!-- Thead & Tbody dynamically rendered -->
@@ -340,22 +395,23 @@
 
       let html = `<thead>`;
       
-      // 행 1: 직책 / 성명 / 1..daysCount / 주간 / 야간 / 휴일 (글자 크기 text-sm 및 th 패딩 확대)
+      // 행 1: 직책 / 성명 / 1..daysCount / 주간 / 야간 / 휴일
+      // table-layout: fixed 환경에 맞춰 성명은 줄바꿈 없이(whitespace-nowrap) 여유 있게 배정
       html += `<tr class="bg-slate-100 text-slate-800 font-extrabold border-b border-slate-300 text-sm sm:text-base">`;
-      html += `<th rowspan="2" class="p-2.5 border border-slate-300 w-16 sm:w-20 bg-slate-200">직책</th>`;
-      html += `<th rowspan="2" class="p-2.5 border border-slate-300 w-28 sm:w-32 bg-slate-200">성명</th>`;
+      html += `<th rowspan="2" class="p-2 border border-slate-300 w-14 sm:w-16 bg-slate-200 whitespace-nowrap">직책</th>`;
+      html += `<th rowspan="2" class="worker-name-col p-2 border border-slate-300 w-24 sm:w-32 bg-slate-200 whitespace-nowrap">성명</th>`;
       
       for (let d = 1; d <= daysCount; d++) {
         const dow = getDayOfWeek(currentYear, currentMonth, d);
         let colorClass = "text-slate-800";
         if (dow === 0) colorClass = "text-rose-600 bg-rose-50/70";
         if (dow === 6) colorClass = "text-blue-600 bg-blue-50/70";
-        html += `<th class="p-1 sm:p-1.5 border border-slate-300 font-bold ${colorClass} min-w-[30px] sm:min-w-[36px]">${d}</th>`;
+        html += `<th class="p-1 sm:p-1.5 border border-slate-300 font-bold ${colorClass}">${d}</th>`;
       }
       
-      html += `<th class="p-1 sm:p-1.5 border border-slate-300 w-11 sm:w-12 bg-sky-100 text-sky-900 font-extrabold">주<br>간</th>`;
-      html += `<th class="p-1 sm:p-1.5 border border-slate-300 w-11 sm:w-12 bg-indigo-100 text-indigo-900 font-extrabold">야<br>간</th>`;
-      html += `<th class="p-1 sm:p-1.5 border border-slate-300 w-11 sm:w-12 bg-rose-100 text-rose-900 font-extrabold">휴<br>일</th>`;
+      html += `<th class="p-1 sm:p-1.5 border border-slate-300 w-10 sm:w-12 bg-sky-100 text-sky-900 font-extrabold whitespace-nowrap">주<br class="hidden sm:inline">간</th>`;
+      html += `<th class="p-1 sm:p-1.5 border border-slate-300 w-10 sm:w-12 bg-indigo-100 text-indigo-900 font-extrabold whitespace-nowrap">야<br class="hidden sm:inline">간</th>`;
+      html += `<th class="p-1 sm:p-1.5 border border-slate-300 w-10 sm:w-12 bg-rose-100 text-rose-900 font-extrabold whitespace-nowrap">휴<br class="hidden sm:inline">일</th>`;
       html += `</tr>`;
 
       // 행 2: 요일 표시 행
@@ -373,17 +429,17 @@
       html += `</tr>`;
       html += `</thead><tbody>`;
 
-      // 4명의 간병사 행 렌더링 (글자 크기 text-base로 대폭 키움)
+      // 4명의 간병사 행 렌더링
       workers.forEach((worker) => {
         html += `<tr class="hover:bg-slate-50/80 transition-colors">`;
-        html += `<td class="p-2 sm:p-3 border border-slate-300 font-semibold text-slate-700 bg-slate-50 text-sm sm:text-base">${worker.role}</td>`;
+        html += `<td class="p-2 sm:p-3 border border-slate-300 font-semibold text-slate-700 bg-slate-50 text-sm sm:text-base whitespace-nowrap">${worker.role}</td>`;
         
-        // 보기 전용일 경우 이름 인풋 비활성화
+        // 보기 전용일 경우 이름 인풋 비활성화 (whitespace-nowrap 적용으로 줄바꿈 방지)
         if (isReadOnly) {
-          html += `<td class="p-2 sm:p-3 border border-slate-300 font-bold text-slate-900 bg-slate-50 text-center select-none text-sm sm:text-base">${worker.name}</td>`;
+          html += `<td class="worker-name-col p-2 sm:p-3 border border-slate-300 font-bold text-slate-900 bg-slate-50 text-center select-none text-sm sm:text-base whitespace-nowrap">${worker.name}</td>`;
         } else {
-          html += `<td class="p-1 sm:p-2 border border-slate-300 font-bold text-slate-900 bg-slate-50 text-sm sm:text-base">
-            <input type="text" value="${worker.name}" data-worker-id="${worker.id}" class="worker-name-input w-full text-center bg-transparent border-none focus:outline-none focus:ring-2 focus:ring-indigo-400 rounded py-1 font-bold text-slate-900" />
+          html += `<td class="worker-name-col p-1 border border-slate-300 font-bold text-slate-900 bg-slate-50 text-sm sm:text-base whitespace-nowrap">
+            <input type="text" value="${worker.name}" data-worker-id="${worker.id}" class="worker-name-input w-full text-center bg-transparent border-none focus:outline-none focus:ring-2 focus:ring-indigo-400 rounded py-1 font-bold text-slate-900 whitespace-nowrap" />
           </td>`;
         }
 
@@ -398,7 +454,7 @@
           else if (shift === 'n') nCount++;
           else if (shift === '/') offCount++;
 
-          // 스타일 클래스 - 글자 크기를 18px 이상으로 크고 선명하게
+          // 스타일 클래스
           let badgeClass = "text-slate-300";
           let bgClass = "";
           if (shift === '/') {
@@ -415,17 +471,17 @@
 
           html += `<td class="p-0 border border-slate-300 relative select-none transition-colors ${cursorClass} ${bgClass}" 
                       data-worker="${worker.id}" data-day="${d}">
-            <div class="h-10 sm:h-12 flex items-center justify-center ${badgeClass}">
-              ${shift || '<span class="text-slate-200 text-sm">-</span>'}
+            <div class="cell-shift h-10 sm:h-12 flex items-center justify-center ${badgeClass}">
+              ${shift || '<span class="text-slate-200 text-sm no-print">-</span>'}
             </div>
             ${requestDot}
           </td>`;
         }
 
-        // 통계 컬럼 (주간 / 야간 / 휴일) - 폰트 크게 강조
-        html += `<td class="p-2 border border-slate-300 font-extrabold text-sky-800 bg-sky-50 text-sm sm:text-base">${sCount}</td>`;
-        html += `<td class="p-2 border border-slate-300 font-extrabold text-indigo-800 bg-indigo-50 text-sm sm:text-base">${nCount}</td>`;
-        html += `<td class="p-2 border border-slate-300 font-extrabold text-rose-800 bg-rose-50 text-sm sm:text-base">${offCount}</td>`;
+        // 통계 컬럼 (주간 / 야간 / 휴일)
+        html += `<td class="p-1 sm:p-2 border border-slate-300 font-extrabold text-sky-800 bg-sky-50 text-sm sm:text-base whitespace-nowrap">${sCount}</td>`;
+        html += `<td class="p-1 sm:p-2 border border-slate-300 font-extrabold text-indigo-800 bg-indigo-50 text-sm sm:text-base whitespace-nowrap">${nCount}</td>`;
+        html += `<td class="p-1 sm:p-2 border border-slate-300 font-extrabold text-rose-800 bg-rose-50 text-sm sm:text-base whitespace-nowrap">${offCount}</td>`;
         html += `</tr>`;
       });
 
@@ -992,7 +1048,8 @@
         }
       });
     });
-   window.addEventListener("DOMContentLoaded", () => {
+
+    window.addEventListener("DOMContentLoaded", () => {
       const loadedFromHash = loadFromUrlHash();
       if (!loadedFromHash) {
         // 이전에 저장된 최근 작업 연/월 불러오기
